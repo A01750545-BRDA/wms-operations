@@ -2,8 +2,9 @@ from dataclasses import dataclass
 from typing import Optional
 from time import time
 from neo4j import Transaction
-from logic.warehouse_operations import get_storage_locations, assert_enough_offer, assert_route
+from logic.warehouse_operations import get_storage_locations, assert_enough_offer, assert_route, assert_order_summary
 from logic.routing_operations import get_distance_matrix, get_picking_summary, TSPSolver, find_path
+from graph_db.queries.manipulation_queries import PROCESS_ORDER_SUMMARY, RESTORE_ORDER_SUMMARY
 from config.settings import Config
 import warnings
 
@@ -34,8 +35,8 @@ class PickingService:
     def __init__(self, is_testing: bool):
         self.is_testing = is_testing
 
+    @staticmethod
     def _solve_test(
-            self,
             tx: Transaction,
             product_list: dict[str, int],
             start_id: str,
@@ -117,8 +118,8 @@ class PickingService:
             performance_metrics=metrics
         )
 
+    @staticmethod
     def _solve(
-            self,
             tx: Transaction,
             product_list: dict[str, int],
             start_id: str,
@@ -216,3 +217,55 @@ class PickingService:
                 )
         
         return picking_solution
+    
+    @staticmethod
+    def _process_order_summary(
+        tx: Transaction,
+        summary: dict[str, dict[str, dict[str, int]]]
+        ) -> None:
+
+        flat_summary = [
+            {'storageId': storage_id, 'skuId': sku_id, 'quantity': data['quantity'], 'take': data['take']} 
+            for storage_id, skus in summary.items()
+            for sku_id, data in skus.items()
+        ]
+
+        assert_order_summary(tx, flat_summary)
+        tx.run(PROCESS_ORDER_SUMMARY, summary=flat_summary)
+
+    def process_order_summary(
+            self, 
+            summary: dict[str, dict[str, dict[str, int]]]
+        ) -> None:
+
+        with Config.db.driver.session() as session:
+            session.execute_write(
+                self._process_order_summary,
+                summary
+            )
+    
+    @staticmethod
+    def _restore_order_summary(
+        tx: Transaction,
+        summary: dict[str, dict[str, dict[str, int]]]
+        ) -> None:
+
+        flat_summary = [
+            {'storageId': storage_id, 'skuId': sku_id, 'quantity': data['quantity'], 'take': data['take']} 
+            for storage_id, skus in summary.items()
+            for sku_id, data in skus.items()
+        ]
+
+        tx.run(RESTORE_ORDER_SUMMARY, summary=flat_summary)
+
+    def restore_order_summary(
+            self, 
+            summary: dict[str, dict[str, dict[str, int]]]
+        ) -> None:
+
+        with Config.db.driver.session() as session:
+            session.execute_write(
+                self._restore_order_summary,
+                summary
+            )
+    

@@ -10,7 +10,6 @@ ORDER BY skuId, distance, quantity DESC
 
 WITH skuId, from, desiredQuantity, collect({
     storageId: storage.id,
-
     quantity: quantity,
     distance: distance
 }) as storagesList
@@ -43,32 +42,6 @@ RETURN
 ORDER BY skuId, storage.distance
 '''
 
-# NODE_DISTANCES = '''
-# // Query for start-to-storage distances
-# MATCH (from: Origin {id: 'start'}), (to: Storage)
-# WHERE to.id IN $ids
-# MATCH path = shortestPath((from)-[:CONNECTED_TO*]-(to))
-# RETURN from.id as from, to.id as to,
-#     reduce(distance = 0, r IN relationships(path) | distance + r.distance) as distance
-
-# UNION ALL
-
-# // Query for storage-to-storage distances
-# MATCH (from: Storage), (to: Storage)
-# WHERE from.id IN $ids AND to.id IN $ids AND from.id <> to.id AND from.id > to.id
-# MATCH path = shortestPath((from)-[:CONNECTED_TO*]-(to))
-# RETURN from.id as from, to.id as to,
-#     reduce(distance = 0, r IN relationships(path) | distance + r.distance) as distance
-
-# UNION ALL
-
-# // Query for storage-to-end distances
-# MATCH (from: Storage), (to: Origin {id: $destId})
-# WHERE from.id IN $ids
-# MATCH path = shortestPath((from)-[:CONNECTED_TO*]-(to))
-# RETURN from.id as from, to.id as to,
-#     reduce(distance = 0, r IN relationships(path) | distance + r.distance) as distance
-# '''
 NODE_DISTANCES = '''
 // Query for storage-to-storage distances
 MATCH (from), (to)
@@ -77,37 +50,11 @@ MATCH path = shortestPath((from)-[:CONNECTED_TO*]-(to))
 RETURN from.id as from, to.id as to,
     reduce(distance = 0, r IN relationships(path) | distance + r.distance) as distance
 '''
-# NODE_DISTANCES = '''
-# // Query for storage-to-storage distances
-# MATCH (from), (to)
-# WHERE from.id IN $ids AND to.id IN $ids AND from.id <> to.id AND from.id > to.id
-# CALL apoc.algo.dijkstra(from, to, 'CONNECTED_TO', 'distance')
-# YIELD path, weight
-# RETURN from.id as from, to.id as to, weight as distance
-# '''
 
 NODE_DISTANCE_EXHAUSTIVE = '''
-// Query for start-to-storage distances
-MATCH (from: Origin {id: 'start'}), (to: Storage)
-WHERE to.id IN $ids
-CALL apoc.algo.dijkstra(from, to, 'CONNECTED_TO', 'distance')
-YIELD path, weight
-RETURN from.id as from, to.id as to, weight as distance
-
-UNION ALL
-
 // Query for storage-to-storage distances
-MATCH (from: Storage), (to: Storage)
+MATCH (from), (to)
 WHERE from.id IN $ids AND to.id IN $ids AND from.id <> to.id AND from.id > to.id
-CALL apoc.algo.dijkstra(from, to, 'CONNECTED_TO', 'distance')
-YIELD path, weight
-RETURN from.id as from, to.id as to, weight as distance
-
-UNION ALL
-
-// Query for storage-to-end distances
-MATCH (from: Storage), (to: Origin {id: $destId})
-WHERE from.id IN $ids
 CALL apoc.algo.dijkstra(from, to, 'CONNECTED_TO', 'distance')
 YIELD path, weight
 RETURN from.id as from, to.id as to, weight as distance
@@ -125,4 +72,37 @@ RETURN
     to.id as to,
     weight as distance,
     [n in nodes(path) WHERE n.z = 0] as path
+'''
+
+RESTORE_ORDER_SUMMARY = '''
+WITH $summary AS data
+UNWIND data AS item
+MATCH (sku: Sku {id: item.skuId}), (p)-[:STORES]-(storage: Storage {id: item.storageId})
+MERGE (p)-[contains: CONTAINS]->(sku)
+ON CREATE SET contains.quantity = item.quantity
+ON MATCH SET contains.quantity = item.quantity
+'''
+
+MISMATCHES_ORDER_SUMMARY = '''
+WITH $summary AS data
+UNWIND data AS item
+MATCH (sku: Sku {id: item.skuId})-[contains: CONTAINS]-()-[:STORES]-(storage: Storage {id: item.storageId})
+WHERE contains.quantity <> item.quantity
+RETURN collect({
+    storageId: item.storageId,
+    skuId: item.skuId,
+    expectedQuantity: item.quantity,
+    actualQuantity: contains.quantity
+}) AS failedItems
+'''
+
+PROCESS_ORDER_SUMMARY = '''
+WITH $summary AS data
+UNWIND data AS item
+MATCH (sku: Sku {id: item.skuId})-[contains: CONTAINS]-()-[:STORES]-(storage: Storage {id: item.storageId})
+WHERE contains.quantity = item.quantity
+SET contains.quantity = contains.quantity - item.take
+WITH item, contains
+WHERE contains.quantity = 0
+DELETE contains
 '''

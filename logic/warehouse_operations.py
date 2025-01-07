@@ -1,7 +1,7 @@
 import random
 from neo4j import Record, Transaction
 from graph_db.queries.utility_queries import GET_RAND_N_SKUS, SPECIFIC_SKU_OFFER
-from graph_db.queries.manipulation_queries import STORAGE_LOCATION_RETRIEVER
+from graph_db.queries.manipulation_queries import STORAGE_LOCATION_RETRIEVER, MISMATCHES_ORDER_SUMMARY
 
 def simulate_product_list(
         tx: Transaction, 
@@ -70,3 +70,15 @@ def assert_route(
             differences[sku] = {'need': product_list[sku], 'took': built_product_list[sku]}
     
     assert not differences, f'Unsatisfied demand {differences}'
+
+def assert_order_summary(
+        tx: Transaction,
+        flat_summary: list[dict]
+    ) -> None:
+    
+    mismatches = tx.run(
+        MISMATCHES_ORDER_SUMMARY,
+        summary=flat_summary
+    ).single()['failedItems']
+
+    assert not mismatches, f'{len(mismatches)} mismatches found. {[mismatch for mismatch in mismatches]}'
