@@ -16,6 +16,7 @@ from .queries.creation_queries import (
 from .queries.utility_queries import GET_STORAGES
 from data import WarehouseSpecs
 from neo4j import Transaction
+from config.settings import Config
 import random
 
 details = WarehouseSpecs.details
@@ -152,3 +153,11 @@ def add_paletts_to_storage(tx: Transaction) -> None:
             storageId=record.get('id'),
         )
         i += 1
+
+if __name__ == '__main__':
+    with Config.db.driver.session() as session:
+        session.execute_write(create_warehouse)
+        session.execute_write(create_skus)
+        session.execute_write(create_paletts)
+        session.execute_write(add_skus_to_paletts)
+        session.execute_write(add_paletts_to_storage)
