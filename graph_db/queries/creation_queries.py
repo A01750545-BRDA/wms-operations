@@ -120,15 +120,15 @@ CREATE (i)-[:CONNECTED_TO {
 '''
 
 ### Objects
-CREATE_PALETT = '''
-CREATE (:Palett {
+CREATE_PALLET = '''
+CREATE (:Pallet {
     id: $id,
     volume: $volume
 })'''
 
-ADD_PALETT_TO_STORAGE = '''
-MATCH (s: Storage), (p: Palett)
-WHERE s.id = $storageId AND p.id = $palettId
+ADD_PALLET_TO_STORAGE = '''
+MATCH (s: Storage), (p: Pallet)
+WHERE s.id = $storageId AND p.id = $palletId
 CREATE (s)-[:STORES]->(p)
 '''
 
@@ -138,8 +138,8 @@ CREATE (:Sku {
     volume: $volume
 })'''
 
-ADD_SKU_TO_PALETT = '''
-MATCH (p: Palett), (sku: Sku)
-WHERE p.id = $palettId AND sku.id = $skuId
+ADD_SKU_TO_PALLET = '''
+MATCH (p: Pallet), (sku: Sku)
+WHERE p.id = $palletId AND sku.id = $skuId
 CREATE (p)-[:CONTAINS {quantity: $quantity}]->(sku)
 '''

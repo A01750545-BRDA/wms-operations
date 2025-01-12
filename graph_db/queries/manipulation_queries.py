@@ -3,7 +3,7 @@ MATCH (from:Origin {id: 'start'})
 UNWIND $productList as product
 WITH from, product[0] as skuId, product[1] as desiredQuantity
 
-MATCH (sku:Sku {id: skuId})<-[contains:CONTAINS]-(palett:Palett)<-[:STORES]-(storage:Storage)
+MATCH (sku:Sku {id: skuId})<-[contains:CONTAINS]-(pallet:Pallet)<-[:STORES]-(storage:Storage)
 WITH from, skuId, storage, contains.quantity as quantity, desiredQuantity,
     abs(from.x - storage.x) + abs(from.y - storage.y) + abs(from.z - storage.z)*100 as distance
 ORDER BY skuId, distance, quantity DESC

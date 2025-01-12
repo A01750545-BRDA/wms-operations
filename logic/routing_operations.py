@@ -249,9 +249,9 @@ def find_path(
         node_to_index: dict[str, int]
     ) -> list[dict]:
     '''
-    Given a TSP tour (where every element is the index of a palett to be visited) and
+    Given a TSP tour (where every element is the index of a pallet to be visited) and
     the id to which each index refers to, this function returns a detailed path of
-    the nodes that must be traveled to move from one palett to another, from start to end.
+    the nodes that must be traveled to move from one pallet to another, from start to end.
     '''
 
     index_to_node = [x for x,_ in sorted(node_to_index.items(), key=lambda x: x[1])]
