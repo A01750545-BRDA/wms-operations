@@ -35,7 +35,7 @@ MATCH (s1: Storage), (s2: Storage)
 WHERE s1.rack = s2.rack
   AND s1.index = s2.index
   AND s1.level + 1 = s2.level
-WITH abs(s1.x - s2.x) as x, abs(s1.y - s2.y) as y, abs(s1.z - s2.z) as z
+WITH s1, s2, abs(s1.x - s2.x) as x, abs(s1.y - s2.y) as y, abs(s1.z - s2.z) as z
 CREATE (s1)-[:CONNECTED_TO {
     effort: 10,
     distance: x + y + z,
@@ -51,7 +51,7 @@ WHERE s1.rack = s2.rack
 AND s1.level = s2.level
 AND s1.level = 1
 AND abs(s1.index - s2.index) = 1
-WITH abs(s1.x - s2.x) as x, abs(s1.y - s2.y) as y
+WITH s1, s2, abs(s1.x - s2.x) as x, abs(s1.y - s2.y) as y
 CREATE (s1)-[:CONNECTED_TO {
     effort: 1,
     distance: x + y,
@@ -68,7 +68,7 @@ WHERE s.level = 1
   AND abs(abs(i.x - s.x) - $hDistanceFromIntersection) < 0.01
   AND abs(abs(i.y - s.y) - $vDistanceFromIntersection) < 0.01
 
-WITH abs(i.x - s.x) as x, abs(i.y - s.y) as y
+WITH i, s, abs(i.x - s.x) as x, abs(i.y - s.y) as y
 CREATE (i)-[:CONNECTED_TO {
     effort: 1,
     distance: x + y,
@@ -83,7 +83,7 @@ MATCH (i1: Intersection), (i2: Intersection)
 WHERE (abs(i1.row - i2.row) = 1 AND i1.col = i2.col) OR
     (abs(i1.col - i2.col) = 1 AND i1.row = i2.row)
 
-WITH abs(i1.x - i2.x) as x, abs(i1.y - i2.y) as y
+WITH i1, i2, abs(i1.x - i2.x) as x, abs(i1.y - i2.y) as y
 CREATE (i1)-[:CONNECTED_TO {
     effort: 1,
     distance: x + y,
@@ -96,7 +96,7 @@ CREATE (i1)-[:CONNECTED_TO {
 CONNECT_IN_ORIGIN = '''
 MATCH (o: Origin), (i: Intersection)
 WHERE o.id IN $originIds AND i.id IN $intersectionIds
-WITH (o.x - i.x) as x, (o.y - i.y) as y
+WITH o, i, (o.x - i.x) as x, (o.y - i.y) as y
 CREATE (o)-[:CONNECTED_TO {
     effort: 1,
     distance: (x^2 + y^2)^0.5,
@@ -109,7 +109,7 @@ CREATE (o)-[:CONNECTED_TO {
 CONNECT_OUT_ORIGIN = '''
 MATCH (o: Origin), (i: Intersection)
 WHERE o.id IN $originIds AND i.id IN $intersectionIds
-WITH (o.x - i.x) as x, (o.y - i.y) as y
+WITH o, i, (o.x - i.x) as x, (o.y - i.y) as y
 CREATE (i)-[:CONNECTED_TO {
     effort: 1,
     distance: (x^2 + y^2)^0.5,

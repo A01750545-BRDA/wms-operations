@@ -1,4 +1,4 @@
-from .queries.creation_queries import (
+from graph_db.queries.creation_queries import (
     CREATE_STORAGE,
     CONNECT_STORAGE_VERTICALLY,
     CONNECT_STORAGE_HORIZONTALLY,
@@ -13,7 +13,7 @@ from .queries.creation_queries import (
     ADD_SKU_TO_PALLET,
     ADD_PALLET_TO_STORAGE
 )
-from .queries.utility_queries import GET_STORAGES
+from graph_db.queries.utility_queries import GET_STORAGES
 from data import WarehouseSpecs
 from neo4j import Transaction
 from config.settings import Config
