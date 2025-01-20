@@ -1,6 +1,6 @@
 import random
 from neo4j import Record, Transaction
-from graph_db.queries.utility_queries import GET_RAND_N_SKUS, SPECIFIC_SKU_OFFER
+from graph_db.queries.utility_queries import GET_RAND_N_PRODUCTS, SPECIFIC_PRODUCT_OFFER
 from graph_db.queries.manipulation_queries import STORAGE_LOCATION_RETRIEVER, MISMATCHES_ORDER_SUMMARY
 
 def simulate_product_list(
@@ -11,7 +11,7 @@ def simulate_product_list(
     ) -> dict[str, int]:
 
     result = tx.run(
-        GET_RAND_N_SKUS,
+        GET_RAND_N_PRODUCTS,
         n=n
     )
 
@@ -37,7 +37,7 @@ def assert_enough_offer(
         product_list: dict[str, int]
     ) -> None:
 
-    result = tx.run(SPECIFIC_SKU_OFFER, skuIds=list(product_list.keys()))
+    result = tx.run(SPECIFIC_PRODUCT_OFFER, productIds=list(product_list.keys()))
     insufficiencies = dict()
 
     for record in result:
@@ -47,7 +47,7 @@ def assert_enough_offer(
         if offer < product_list.get(id):
             insufficiencies[id] = {'need': product_list.get(id), 'available': offer}
     
-    assert not insufficiencies, f'Insufficient SKU offer: {insufficiencies}'
+    assert not insufficiencies, f'Insufficient PRODUCT offer: {insufficiencies}'
 
 def assert_route(
         product_list: dict[str, int], 
@@ -56,18 +56,18 @@ def assert_route(
 
     built_product_list = dict()
     for location in storage_locations:
-        sku_id = location['skuId']
+        product_id = location['productId']
         
-        if sku_id in built_product_list:
-            built_product_list[sku_id] += location['take']
+        if product_id in built_product_list:
+            built_product_list[product_id] += location['take']
         else:
-            built_product_list[sku_id] = location['take']
+            built_product_list[product_id] = location['take']
     
     # Get differences
     differences = dict()
-    for sku in product_list:
-        if product_list[sku] != built_product_list[sku]:
-            differences[sku] = {'need': product_list[sku], 'took': built_product_list[sku]}
+    for product in product_list:
+        if product_list[product] != built_product_list[product]:
+            differences[product] = {'need': product_list[product], 'took': built_product_list[product]}
     
     assert not differences, f'Unsatisfied demand {differences}'
 

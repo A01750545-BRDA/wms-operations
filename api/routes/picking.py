@@ -27,9 +27,9 @@ async def compute_latest_route(request: LatestOrderConfig = LatestOrderConfig())
     FROM wms.scheduled_outbounds_products sop;
     '''
     cursor.execute(query)
-    distinct_skus = cursor.fetchall()
+    distinct_products = cursor.fetchall()
 
-    map_skus = {sku[0]: f'Sku_{i}' for i, sku in enumerate(distinct_skus, 1)}
+    map_products = {product[0]: f'Product_{i}' for i, product in enumerate(distinct_products, 1)}
     
     query = '''
     SELECT sop.sku, sop.cantidad
@@ -40,7 +40,7 @@ async def compute_latest_route(request: LatestOrderConfig = LatestOrderConfig())
     picking_order = cursor.fetchall()
     cursor.close()
     
-    product_list = {map_skus[sku]: quantity for sku, quantity in picking_order}
+    product_list = {map_products[product]: quantity for product, quantity in picking_order}
     picking_solution = picking_service.optimize(
         product_list,
         **request.config

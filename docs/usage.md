@@ -24,8 +24,8 @@ from services.picking_service import PickingService
 
 ```python
 product_list = {
-    'Sku_1': 10,
-    'Sku_2': 5
+    'Product_1': 10,
+    'Product_2': 5
 }
 ```
 

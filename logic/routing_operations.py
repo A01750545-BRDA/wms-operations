@@ -213,7 +213,7 @@ def get_picking_summary(
         storage_locations: List of storage location records with product details
         
     Returns:
-        Nested dictionary mapping storage IDs to their SKUs and picking details
+        Nested dictionary mapping storage IDs to their PRODUCTs and picking details
     '''
 
     storage_ids = list({loc['storageId'] for loc in storage_locations})
@@ -230,12 +230,12 @@ def get_picking_summary(
 
     for location in sorted_locations:
         storage_id = location['storageId']
-        sku_id = location['skuId']
+        product_id = location['productId']
         
         if storage_id not in summary:
             summary[storage_id] = {}
             
-        summary[storage_id][sku_id] = {
+        summary[storage_id][product_id] = {
             'quantity': location['quantity'],
             'take': location['take']
         }

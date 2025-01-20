@@ -19,22 +19,22 @@ RETURN s.id as id
 LIMIT $n
 '''
 
-GET_RAND_N_SKUS = '''
-MATCH (sku: Sku)
-RETURN sku.id as id
+GET_RAND_N_PRODUCTS = '''
+MATCH (product: Product)
+RETURN product.id as id
 ORDER BY RAND()
 LIMIT $n
 '''
 
-GENERAL_SKU_OFFER = '''
-MATCH (sku: Sku)<-[contains: CONTAINS]-()
-RETURN sku.id as id, sum(contains.quantity) as contained
+GENERAL_PRODUCT_OFFER = '''
+MATCH (product: Product)<-[contains: CONTAINS]-()
+RETURN product.id as id, sum(contains.quantity) as contained
 ORDER BY contained DESC
 '''
 
-SPECIFIC_SKU_OFFER = '''
-MATCH (sku: Sku)<-[contains: CONTAINS]-()
-WHERE sku.id IN $skuIds
-RETURN sku.id as id, sum(contains.quantity) as contained
+SPECIFIC_PRODUCT_OFFER = '''
+MATCH (product: Product)<-[contains: CONTAINS]-()
+WHERE product.id IN $productIds
+RETURN product.id as id, sum(contains.quantity) as contained
 ORDER BY contained DESC
 '''

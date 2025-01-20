@@ -184,9 +184,9 @@ def animate_computed_multiple_paths(paths: list[list], interval: int = 50):
 
 def product_list_from_summary(summary):
     res = defaultdict(int)
-    for _, skus in summary.items():
-        for sku, info in skus.items():
-            res[sku] += info['take']
+    for _, products in summary.items():
+        for product, info in products.items():
+            res[product] += info['take']
 
     return dict(res)
 

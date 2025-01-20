@@ -2,8 +2,8 @@
 class WarehouseSpecs:
     dimensions = {
         'hall': {
-            'x': 6,
-            'y': 4,
+            'x': 4,
+            'y': 6,
         },
         'pallet': {
             'x': 1.2,
@@ -14,22 +14,22 @@ class WarehouseSpecs:
 
     details = {
         'hall': {
-            'n_cols': 10 + 1,
-            'n_rows': 5 + 1,
+            'n_cols': 3 + 1,
+            'n_rows': 2 + 1,
         },
         'rack': {
-            'indexes': 13,
-            'levels': 5,
+            'indexes': 4,
+            'levels': 1,
         }
     }
 
     X = (
         details['hall']['n_cols'] * dimensions['hall']['x'] +
-        (details['hall']['n_cols'] - 1) * dimensions['pallet']['x'] * details['rack']['indexes']
+        (details['hall']['n_cols'] - 1) * dimensions['pallet']['x'] * 2
     )
     Y = (
         details['hall']['n_rows'] * dimensions['hall']['y'] +
-        (details['hall']['n_rows'] - 1) * dimensions['pallet']['y'] * 2
+        (details['hall']['n_rows'] - 1) * dimensions['pallet']['y'] * details['rack']['indexes']
     )
     Z = dimensions['pallet']['z'] * details['rack']['levels']
 
@@ -40,4 +40,4 @@ class WarehouseSpecs:
         details['rack']['indexes'] *
         details['rack']['levels']
     )
-    unique_products = 1000
+    unique_products = 10

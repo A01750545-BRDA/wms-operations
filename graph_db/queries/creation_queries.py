@@ -5,7 +5,9 @@ CREATE (:Storage {
     rack: $rack,
     index: $index,
     level: $level,
-    isEdge: $isEdge,
+    cornerType: $cornerType,
+    colHall: $colHall,
+    rowHall: $rowHall,
     x: $x,
     y: $y,
     z: $z
@@ -37,7 +39,6 @@ WHERE s1.rack = s2.rack
   AND s1.level + 1 = s2.level
 WITH s1, s2, abs(s1.x - s2.x) as x, abs(s1.y - s2.y) as y, abs(s1.z - s2.z) as z
 CREATE (s1)-[:CONNECTED_TO {
-    effort: 10,
     distance: x + y + z,
     x: x,
     y: y,
@@ -53,7 +54,6 @@ AND s1.level = 1
 AND abs(s1.index - s2.index) = 1
 WITH s1, s2, abs(s1.x - s2.x) as x, abs(s1.y - s2.y) as y
 CREATE (s1)-[:CONNECTED_TO {
-    effort: 1,
     distance: x + y,
     x: x,
     y: y,
@@ -63,14 +63,13 @@ CREATE (s1)-[:CONNECTED_TO {
 
 CONNECT_INTERSECTION_STORAGE = '''
 MATCH (i: Intersection), (s: Storage)
-WHERE s.level = 1
-  AND s.isEdge = true
-  AND abs(abs(i.x - s.x) - $hDistanceFromIntersection) < 0.01
-  AND abs(abs(i.y - s.y) - $vDistanceFromIntersection) < 0.01
+WHERE s.level = 1 AND (
+    (s.cornerType = 'first' AND i.row = s.rowHall AND i.col = s.colHall) OR
+    (s.cornerType = 'last' AND i.row = s.rowHall + 1 AND i.col = s.colHall)
+)
 
 WITH i, s, abs(i.x - s.x) as x, abs(i.y - s.y) as y
 CREATE (i)-[:CONNECTED_TO {
-    effort: 1,
     distance: x + y,
     x: x,
     y: y,
@@ -85,7 +84,6 @@ WHERE (abs(i1.row - i2.row) = 1 AND i1.col = i2.col) OR
 
 WITH i1, i2, abs(i1.x - i2.x) as x, abs(i1.y - i2.y) as y
 CREATE (i1)-[:CONNECTED_TO {
-    effort: 1,
     distance: x + y,
     x: x,
     y: y,
@@ -98,7 +96,6 @@ MATCH (o: Origin), (i: Intersection)
 WHERE o.id IN $originIds AND i.id IN $intersectionIds
 WITH o, i, (o.x - i.x) as x, (o.y - i.y) as y
 CREATE (o)-[:CONNECTED_TO {
-    effort: 1,
     distance: (x^2 + y^2)^0.5,
     x: x,
     y: y,
@@ -111,7 +108,6 @@ MATCH (o: Origin), (i: Intersection)
 WHERE o.id IN $originIds AND i.id IN $intersectionIds
 WITH o, i, (o.x - i.x) as x, (o.y - i.y) as y
 CREATE (i)-[:CONNECTED_TO {
-    effort: 1,
     distance: (x^2 + y^2)^0.5,
     x: x,
     y: y,
@@ -122,8 +118,7 @@ CREATE (i)-[:CONNECTED_TO {
 ### Objects
 CREATE_PALLET = '''
 CREATE (:Pallet {
-    id: $id,
-    volume: $volume
+    id: $id
 })'''
 
 ADD_PALLET_TO_STORAGE = '''
@@ -132,14 +127,13 @@ WHERE s.id = $storageId AND p.id = $palletId
 CREATE (s)-[:STORES]->(p)
 '''
 
-CREATE_SKU = '''
-CREATE (:Sku {
-    id: $id,
-    volume: $volume
+CREATE_PRODUCT = '''
+CREATE (:Product {
+    id: $id
 })'''
 
-ADD_SKU_TO_PALLET = '''
-MATCH (p: Pallet), (sku: Sku)
-WHERE p.id = $palletId AND sku.id = $skuId
-CREATE (p)-[:CONTAINS {quantity: $quantity}]->(sku)
+ADD_PRODUCT_TO_PALLET = '''
+MATCH (pallet: Pallet), (product: Product)
+WHERE pallet.id = $palletId AND product.id = $productId
+CREATE (pallet)-[:CONTAINS {quantity: $quantity}]->(product)
 '''

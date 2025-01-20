@@ -99,7 +99,6 @@ class PickingService:
 
         for solution in solutions:
             # Find path
-            print(solution.optimal_value)
             with TimedOperation('path_finding', debug) as op:
                 path = find_path(tx, solution.tour, node_to_index)
             metrics['path_finding'] += op.duration
@@ -225,9 +224,9 @@ class PickingService:
         ) -> None:
 
         flat_summary = [
-            {'storageId': storage_id, 'skuId': sku_id, 'quantity': data['quantity'], 'take': data['take']} 
-            for storage_id, skus in summary.items()
-            for sku_id, data in skus.items()
+            {'storageId': storage_id, 'productId': product_id, 'quantity': data['quantity'], 'take': data['take']} 
+            for storage_id, products in summary.items()
+            for product_id, data in products.items()
         ]
 
         assert_order_summary(tx, flat_summary)
@@ -251,9 +250,9 @@ class PickingService:
         ) -> None:
 
         flat_summary = [
-            {'storageId': storage_id, 'skuId': sku_id, 'quantity': data['quantity'], 'take': data['take']} 
-            for storage_id, skus in summary.items()
-            for sku_id, data in skus.items()
+            {'storageId': storage_id, 'productId': product_id, 'quantity': data['quantity'], 'take': data['take']} 
+            for storage_id, products in summary.items()
+            for product_id, data in products.items()
         ]
 
         tx.run(RESTORE_ORDER_SUMMARY, summary=flat_summary)

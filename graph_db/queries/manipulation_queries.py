@@ -1,21 +1,21 @@
 STORAGE_LOCATION_RETRIEVER = '''
 MATCH (from:Origin {id: 'start'})
-UNWIND $productList as product
-WITH from, product[0] as skuId, product[1] as desiredQuantity
+UNWIND $productList as productItem
+WITH from, productItem[0] as productId, productItem[1] as desiredQuantity
 
-MATCH (sku:Sku {id: skuId})<-[contains:CONTAINS]-(pallet:Pallet)<-[:STORES]-(storage:Storage)
-WITH from, skuId, storage, contains.quantity as quantity, desiredQuantity,
+MATCH (product:Product {id: productId})<-[contains:CONTAINS]-(pallet:Pallet)<-[:STORES]-(storage:Storage)
+WITH from, productId, storage, contains.quantity as quantity, desiredQuantity,
     abs(from.x - storage.x) + abs(from.y - storage.y) + abs(from.z - storage.z)*100 as distance
-ORDER BY skuId, distance, quantity DESC
+ORDER BY productId, distance, quantity DESC
 
-WITH skuId, from, desiredQuantity, collect({
+WITH productId, from, desiredQuantity, collect({
     storageId: storage.id,
     quantity: quantity,
     distance: distance
 }) as storagesList
 
 UNWIND range(0, size(storagesList)-1) as index
-WITH skuId, from, desiredQuantity, storagesList,
+WITH productId, from, desiredQuantity, storagesList,
     index,
     reduce(s = 0, i IN range(0, index-1) |
         s + CASE
@@ -25,7 +25,7 @@ WITH skuId, from, desiredQuantity, storagesList,
     ) as previousSum
 WHERE previousSum < desiredQuantity
 
-WITH skuId, from, desiredQuantity, storagesList[index] as storage,
+WITH productId, from, desiredQuantity, storagesList[index] as storage,
     previousSum,
     CASE
         WHEN desiredQuantity - previousSum > storagesList[index].quantity
@@ -35,11 +35,11 @@ WITH skuId, from, desiredQuantity, storagesList[index] as storage,
 WHERE take > 0
 
 RETURN
-    skuId,
+    productId,
     storage.quantity as quantity,
     storage.storageId as storageId,
     take
-ORDER BY skuId, storage.distance
+ORDER BY productId, storage.distance
 '''
 
 NODE_DISTANCES = '''
@@ -77,8 +77,8 @@ RETURN
 RESTORE_ORDER_SUMMARY = '''
 WITH $summary AS data
 UNWIND data AS item
-MATCH (sku: Sku {id: item.skuId}), (p)-[:STORES]-(storage: Storage {id: item.storageId})
-MERGE (p)-[contains: CONTAINS]->(sku)
+MATCH (product: Product {id: item.productId}), (p)-[:STORES]-(storage: Storage {id: item.storageId})
+MERGE (p)-[contains: CONTAINS]->(product)
 ON CREATE SET contains.quantity = item.quantity
 ON MATCH SET contains.quantity = item.quantity
 '''
@@ -86,11 +86,11 @@ ON MATCH SET contains.quantity = item.quantity
 MISMATCHES_ORDER_SUMMARY = '''
 WITH $summary AS data
 UNWIND data AS item
-MATCH (sku: Sku {id: item.skuId})-[contains: CONTAINS]-()-[:STORES]-(storage: Storage {id: item.storageId})
+MATCH (product: Product {id: item.productId})-[contains: CONTAINS]-()-[:STORES]-(storage: Storage {id: item.storageId})
 WHERE contains.quantity <> item.quantity
 RETURN collect({
     storageId: item.storageId,
-    skuId: item.skuId,
+    productId: item.productId,
     expectedQuantity: item.quantity,
     actualQuantity: contains.quantity
 }) AS failedItems
@@ -99,7 +99,7 @@ RETURN collect({
 PROCESS_ORDER_SUMMARY = '''
 WITH $summary AS data
 UNWIND data AS item
-MATCH (sku: Sku {id: item.skuId})-[contains: CONTAINS]-()-[:STORES]-(storage: Storage {id: item.storageId})
+MATCH (product: Product {id: item.productId})-[contains: CONTAINS]-()-[:STORES]-(storage: Storage {id: item.storageId})
 WHERE contains.quantity = item.quantity
 SET contains.quantity = contains.quantity - item.take
 WITH item, contains

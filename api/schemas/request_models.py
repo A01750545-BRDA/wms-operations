@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, field_validator
 class PickingRequest(BaseModel):
     product_list: dict[str, int] = Field(
         ..., 
-        description='Dictionary of SKU:quantity pairs'
+        description='Dictionary of PRODUCT:quantity pairs'
     )
     
     config: dict[str, Any] = Field(

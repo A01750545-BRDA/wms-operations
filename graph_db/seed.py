@@ -8,9 +8,9 @@ from graph_db.queries.creation_queries import (
     CREATE_ORIGIN,
     CONNECT_IN_ORIGIN,
     CONNECT_OUT_ORIGIN,
-    CREATE_SKU,
+    CREATE_PRODUCT,
     CREATE_PALLET,
-    ADD_SKU_TO_PALLET,
+    ADD_PRODUCT_TO_PALLET,
     ADD_PALLET_TO_STORAGE
 )
 from graph_db.queries.utility_queries import GET_STORAGES
@@ -25,35 +25,52 @@ X = WarehouseSpecs.X
 Y = WarehouseSpecs.Y
 Z = WarehouseSpecs.Z
 
+def number_to_letters(n):
+    result = []
+    
+    while n > 0:
+        n -= 1
+        remainder = n % 26
+        result.append(chr(remainder + 65))
+        n //= 26
+    
+    return ''.join(result[::-1])
+
 def create_warehouse(tx: Transaction) -> None:
     n_rack = 0
 
     for row in range(1, details['hall']['n_rows']):
-        y_hall = row * dimensions['hall']['y'] + (row - 1) * dimensions['pallet']['y'] * 2
+        y_hall = row * dimensions['hall']['y'] + (row - 1) * dimensions['pallet']['y'] * details['rack']['indexes']
 
         for col in range(1, details['hall']['n_cols']):
-            x_hall = col * dimensions['hall']['x'] + (col - 1) * dimensions['pallet']['x'] * details['rack']['indexes']
+            x_hall = col * dimensions['hall']['x'] + (col - 1) * dimensions['pallet']['x'] * 2
 
             # Back to back racks
             for rack_column in range(2):
-                y = y_hall + (rack_column + 0.5) * dimensions['pallet']['y']
+                x = x_hall + (rack_column + 0.5) * dimensions['pallet']['x']
+                
                 n_rack += 1
+                rack_id = number_to_letters(n_rack)
+                col_hall = col + (1 if rack_column == 1 else 0)
 
                 # Rack locations
                 for index in range(1, details['rack']['indexes'] + 1):
-                    x = x_hall + (index - 0.5) * dimensions['pallet']['x']
+                    y = y_hall + (index - 0.5) * dimensions['pallet']['y']
 
                     # Level within each rack
                     for level in range(1, details['rack']['levels'] + 1):
                         z = (level - 1) * dimensions['pallet']['z']
+                        corner_type = 'last' if index == details['rack']['indexes'] else ('first' if index == 1 else '')
 
                         tx.run(
                             CREATE_STORAGE,
-                            id=f'{row}.{col}-FACE_{rack_column}_I{index}_L{level}',
-                            rack=n_rack,
+                            id=f'{rack_id}.{level}.{index}',
+                            rack=rack_id,
                             index=index,
                             level=level,
-                            isEdge=(index==1) or (index==details['rack']['indexes']),
+                            cornerType=corner_type ,
+                            colHall=col_hall,
+                            rowHall=row,
                             x=x,
                             y=y,
                             z=z
@@ -64,15 +81,15 @@ def create_warehouse(tx: Transaction) -> None:
 
     # Intersection row
     for row in range(1, details['hall']['n_rows'] + 1):
-        y = (row - 0.5) * dimensions['hall']['y'] + (row - 1) * dimensions['pallet']['y'] * 2
+        y = (row - 0.5) * dimensions['hall']['y'] + (row - 1) * dimensions['pallet']['y'] * details['rack']['indexes']
 
         # Intersection col
         for col in range(1, details['hall']['n_cols'] + 1):
-            x = (col - 0.5) * dimensions['hall']['x'] + (col - 1) * dimensions['pallet']['x'] * details['rack']['indexes']
+            x = (col - 0.5) * dimensions['hall']['x'] + (col - 1) * dimensions['pallet']['x'] * 2
 
             tx.run(
                 CREATE_INTERSECTION,
-                id=f'{row}.{col}',
+                id=f'C{col}.R{row}',
                 row=row,
                 col=col,
                 x=x,
@@ -80,18 +97,14 @@ def create_warehouse(tx: Transaction) -> None:
             )
 
     tx.run(CONNECT_INTERSECTION)
-    tx.run(
-        CONNECT_INTERSECTION_STORAGE,
-        hDistanceFromIntersection=(dimensions['hall']['x'] + dimensions['pallet']['x'])/2,
-        vDistanceFromIntersection=(dimensions['hall']['y'] + dimensions['pallet']['y'])/2
-    )
+    tx.run(CONNECT_INTERSECTION_STORAGE)
 
     # Starting point
     tx.run(CREATE_ORIGIN, id=f'start', x=X//2, y=-10)
     tx.run(
         CONNECT_IN_ORIGIN,
         originIds=['start'],
-        intersectionIds=[f"1.{details['hall']['n_cols']//2 + 1}"]
+        intersectionIds=[f"C{col}.R1" for col in range(1, details['hall']['n_cols'] + 1)]
     )
 
     # Destinations
@@ -101,17 +114,17 @@ def create_warehouse(tx: Transaction) -> None:
     tx.run(
         CONNECT_OUT_ORIGIN,
         originIds=['dest1', 'dest2', 'dest3'],
-        intersectionIds=[f"{details['hall']['n_rows']}.{col}" for col in range(1, details['hall']['n_cols'] + 1)]
+        intersectionIds=[f"C{col}.R{details['hall']['n_rows']}" for col in range(1, details['hall']['n_cols'] + 1)]
     )
 
 unique_products = WarehouseSpecs.unique_products
 unique_pallets = WarehouseSpecs.unique_positions
 
-def create_skus(tx: Transaction) -> None:
+def create_products(tx: Transaction) -> None:
     for i in range(1, unique_products + 1):
         tx.run(
-            CREATE_SKU,
-            id=f'Sku_{i}',
+            CREATE_PRODUCT,
+            id=f'Product_{i}',
             volume=random.randint(1, 10),
         )
 
@@ -124,17 +137,17 @@ def create_pallets(tx: Transaction) -> None:
             volume=volume,
         )
 
-def add_skus_to_pallets(tx: Transaction) -> None:
+def add_products_to_pallets(tx: Transaction) -> None:
     for i in range(1, unique_pallets + 1):
-        distinct_skus = random.randint(1, 5)
+        distinct_products = random.randint(1, 5)
 
-        for _ in range(distinct_skus):
-            product_id = f'Sku_{random.randint(1, unique_products)}'
+        for _ in range(distinct_products):
+            product_id = f'Product_{random.randint(1, unique_products)}'
             quantity = random.randint(50, 300)
 
             tx.run(
-                ADD_SKU_TO_PALLET,
-                skuId=product_id,
+                ADD_PRODUCT_TO_PALLET,
+                productId=product_id,
                 palletId=f'Pallet_{i}',
                 quantity=quantity,
             )
@@ -157,7 +170,7 @@ def add_pallets_to_storage(tx: Transaction) -> None:
 if __name__ == '__main__':
     with Config.db.driver.session() as session:
         session.execute_write(create_warehouse)
-        session.execute_write(create_skus)
+        session.execute_write(create_products)
         session.execute_write(create_pallets)
-        session.execute_write(add_skus_to_pallets)
+        session.execute_write(add_products_to_pallets)
         session.execute_write(add_pallets_to_storage)
