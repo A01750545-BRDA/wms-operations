@@ -142,46 +142,47 @@ RETURN value
 
 GET_ALL_STORAGES = """
 MATCH (s: Storage)
-RETURN collect({position: s.id}) as data
+RETURN collect(s.id) as storage_id
 """
 
-GET_ALL_RACKS_AND_AVAILABILITY = """
+GET_ALL_RACKS = """
 MATCH (s: Storage)
 OPTIONAL MATCH (s)-[:STORES]->(p:Pallet)
-WITH s.rack as name, 
-     COUNT(DISTINCT s.id) as positions,
+WITH s.rack as rack, 
+     COUNT(DISTINCT s.id) as total,
      COUNT(DISTINCT p) as occupied
-RETURN
-    name,
-    positions,
-    occupied
-ORDER BY name
+RETURN collect({
+    rack: rack,
+    total: total,
+    occupied: occupied
+}) as data
 """
 
-GET_RACK_LEVELS_AND_AVAILABILITY = """
+GET_RACK_LEVELS = """
 MATCH (s: Storage)
 WHERE s.rack = $rack
 OPTIONAL MATCH (s)-[:STORES]->(p:Pallet)
-WITH s.level as name, 
-     COUNT(DISTINCT s) as positions,
+WITH s.level as level, 
+     COUNT(DISTINCT s) as total,
      COUNT(CASE WHEN p IS NOT NULL THEN 1 ELSE NULL END) as occupied
-RETURN
-    name,
-    positions,
-    occupied
-ORDER BY name
+RETURN collect({
+    level: level,
+    total: total,
+    occupied: occupied
+}) as data
 """
 
-GET_RACK_LEVEL_POSITIONS = """
+GET_RACK_LEVEL_STORAGES = """
 MATCH (s: Storage)
 WHERE s.rack = $rack AND s.level = $level
-RETURN s.id as position
+RETURN collect(s.id) as storage_id
 """
 
-GET_POSITION_COMPONENTS = """
+GET_STORAGE_PRODUCTS = """
 MATCH (s:Storage)-[:STORES]->(p:Pallet)-[c:CONTAINS]->(product:Product)
 WHERE s.id = $storageId
-RETURN 
-    product.id as gwin,
-    c.quantity as quantity
+RETURN collect({
+    gwin: product.id,
+    quantity: c.quantity
+}) as data
 """

@@ -1,10 +1,12 @@
 from graph_db.queries.creation_queries import (
     CREATE_STORAGE,
     CONNECT_STORAGE_VERTICALLY,
-    CONNECT_STORAGE_HORIZONTALLY,
     CREATE_INTERSECTION,
     CONNECT_INTERSECTION,
-    CONNECT_INTERSECTION_STORAGE,
+    CREATE_HALL,
+    CONNECT_HALL,
+    CONNECT_HALL_STORAGE,
+    CONNECT_INTERSECTION_HALL,
     CREATE_ORIGIN,
     CONNECT_IN_ORIGIN,
     CONNECT_OUT_ORIGIN,
@@ -51,7 +53,6 @@ def create_warehouse(tx: Transaction) -> None:
                 
                 n_rack += 1
                 rack_id = number_to_letters(n_rack)
-                col_hall = col + (1 if rack_column == 1 else 0)
 
                 # Rack locations
                 for index in range(1, details['rack']['indexes'] + 1):
@@ -60,7 +61,6 @@ def create_warehouse(tx: Transaction) -> None:
                     # Level within each rack
                     for level in range(1, details['rack']['levels'] + 1):
                         z = (level - 1) * dimensions['pallet']['z']
-                        corner_type = 'last' if index == details['rack']['indexes'] else ('first' if index == 1 else '')
 
                         tx.run(
                             CREATE_STORAGE,
@@ -68,16 +68,14 @@ def create_warehouse(tx: Transaction) -> None:
                             rack=rack_id,
                             index=index,
                             level=level,
-                            cornerType=corner_type ,
-                            colHall=col_hall,
-                            rowHall=row,
+                            row=row,
+                            adjacentCol=col + rack_column,
                             x=x,
                             y=y,
                             z=z
                         )
 
     tx.run(CONNECT_STORAGE_VERTICALLY)
-    tx.run(CONNECT_STORAGE_HORIZONTALLY)
 
     # Intersection row
     for row in range(1, details['hall']['n_rows'] + 1):
@@ -96,8 +94,33 @@ def create_warehouse(tx: Transaction) -> None:
                 y=y
             )
 
+    # Intersection row
+    for row in range(1, details['hall']['n_rows']):
+        y_hall = row * dimensions['hall']['y'] + (row - 1) * dimensions['pallet']['y'] * details['rack']['indexes']
+
+        # Intersection col
+        for col in range(1, details['hall']['n_cols'] + 1):
+            x = (col - 0.5) * dimensions['hall']['x'] + (col - 1) * dimensions['pallet']['x'] * 2
+
+            for index in range(1, details['rack']['indexes'] + 1):
+                y = y_hall + (index - 0.5) * dimensions['pallet']['y']
+                adjacent_row = row if index == 1 else (row + 1 if index == details['rack']['indexes'] else None)
+
+                tx.run(
+                    CREATE_HALL,
+                    id=f'C{col}.R{row}.{index}',
+                    col=col,
+                    row=row,
+                    index=index,
+                    adjacentRow=adjacent_row,
+                    x=x,
+                    y=y
+                )
+
     tx.run(CONNECT_INTERSECTION)
-    tx.run(CONNECT_INTERSECTION_STORAGE)
+    tx.run(CONNECT_INTERSECTION_HALL)
+    tx.run(CONNECT_HALL)
+    tx.run(CONNECT_HALL_STORAGE)
 
     # Starting point
     tx.run(CREATE_ORIGIN, id=f'start', x=X//2, y=-10)
