@@ -22,11 +22,13 @@ def simulate_product_list(
 
 def get_storage_locations(
         tx: Transaction, 
+        start_id: str,
         product_list: dict[str, int]
     ) -> list[Record]:
     
     result = tx.run(
         STORAGE_LOCATION_RETRIEVER,
+        startId=start_id,
         productList=[list(item) for item in product_list.items()]
     )
 

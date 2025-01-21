@@ -1,5 +1,6 @@
 STORAGE_LOCATION_RETRIEVER = '''
-MATCH (from:Origin {id: 'start'})
+MATCH (from)
+WHERE from.id = $startId
 UNWIND $productList as productItem
 WITH from, productItem[0] as productId, productItem[1] as desiredQuantity
 
@@ -101,8 +102,86 @@ WITH $summary AS data
 UNWIND data AS item
 MATCH (product: Product {id: item.productId})-[contains: CONTAINS]-()-[:STORES]-(storage: Storage {id: item.storageId})
 WHERE contains.quantity = item.quantity
-SET contains.quantity = contains.quantity - item.take
-WITH item, contains
-WHERE contains.quantity = 0
-DELETE contains
+WITH contains.quantity - item.take as new_quantity, contains
+CALL apoc.do.when(
+    new_quantity > 0,
+    "SET c1.quantity = new_quantity",
+    "DELETE c1",
+    {new_quantity: new_quantity, contains: contains}
+) YIELD value
+RETURN value
 '''
+
+ADD_PRODUCT_TO_LOCATION = """
+MATCH (s: Storage {id: $location})-[:STORES]-(p: Pallet)
+MATCH (product: Product {id: $productId})
+MERGE (p)-[c:CONTAINS]->(product)
+ON MATCH SET c.quantity = c.quantity + $quantity
+ON CREATE SET c.quantity = $quantity
+"""
+
+MOVE_PRODUCT_TO_LOCATION = """
+MATCH (:Storage {id: $toLocation})-[:STORES]-(p: Pallet)
+MATCH (product: Product {id: $productId})
+
+MERGE (p)-[c: CONTAINS]->(product)
+ON CREATE SET c.quantity = $quantity
+ON MATCH SET c.quantity = c.quantity + $quantity
+
+WITH product
+MATCH (:Storage {id: $fromLocation})-[:STORES]-()-[c1: CONTAINS]-(product)
+WITH c1.quantity - $quantity as new_quantity, c1
+CALL apoc.do.when(
+    new_quantity > 0,
+    "SET c1.quantity = new_quantity",
+    "DELETE c1",
+    {new_quantity: new_quantity, c1: c1}
+) YIELD value
+RETURN value
+"""
+
+GET_ALL_STORAGES = """
+MATCH (s: Storage)
+RETURN collect({position: s.id}) as data
+"""
+
+GET_ALL_RACKS_AND_AVAILABILITY = """
+MATCH (s: Storage)
+OPTIONAL MATCH (s)-[:STORES]->(p:Pallet)
+WITH s.rack as name, 
+     COUNT(DISTINCT s.id) as positions,
+     COUNT(DISTINCT p) as occupied
+RETURN
+    name,
+    positions,
+    occupied
+ORDER BY name
+"""
+
+GET_RACK_LEVELS_AND_AVAILABILITY = """
+MATCH (s: Storage)
+WHERE s.rack = $rack
+OPTIONAL MATCH (s)-[:STORES]->(p:Pallet)
+WITH s.level as name, 
+     COUNT(DISTINCT s) as positions,
+     COUNT(CASE WHEN p IS NOT NULL THEN 1 ELSE NULL END) as occupied
+RETURN
+    name,
+    positions,
+    occupied
+ORDER BY name
+"""
+
+GET_RACK_LEVEL_POSITIONS = """
+MATCH (s: Storage)
+WHERE s.rack = $rack AND s.level = $level
+RETURN s.id as position
+"""
+
+GET_POSITION_COMPONENTS = """
+MATCH (s:Storage)-[:STORES]->(p:Pallet)-[c:CONTAINS]->(product:Product)
+WHERE s.id = $storageId
+RETURN 
+    product.id as gwin,
+    c.quantity as quantity
+"""

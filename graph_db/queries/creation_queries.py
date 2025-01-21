@@ -137,3 +137,11 @@ MATCH (pallet: Pallet), (product: Product)
 WHERE pallet.id = $palletId AND product.id = $productId
 CREATE (pallet)-[:CONTAINS {quantity: $quantity}]->(product)
 '''
+
+CONDITIONAL_CREATE_PRODUCT = """
+MERGE (product: Product {id: $id})
+"""
+
+UNIQUE_PRODUCT_CONSTRAINT = """
+CREATE CONSTRAINT FOR (product: Product) REQUIRE product.id IS UNIQUE
+"""

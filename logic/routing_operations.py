@@ -224,7 +224,7 @@ def get_picking_summary(
         for loc in storage_locations 
         if (i := storage_ids.index(loc['storageId'])) in tour_nodes
     ]
-    sorted_locations = [loc for loc, _ in sorted(locations, key=lambda x: x[0], reverse=False)]
+    sorted_locations = [loc for loc, _ in sorted(locations, key=lambda x: x[1], reverse=False)]
 
     summary = dict()
 

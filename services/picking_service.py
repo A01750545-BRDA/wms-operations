@@ -66,7 +66,7 @@ class PickingService:
         # Validate and get storage locations
         with TimedOperation('location_search', debug) as op:
             assert_enough_offer(tx, product_list)
-            storage_locations = get_storage_locations(tx, product_list)
+            storage_locations = get_storage_locations(tx, start_id, product_list)
             assert_route(product_list, storage_locations)
 
         metrics['location_search'] = op.duration
@@ -144,7 +144,7 @@ class PickingService:
         
         # Validate and get storage locations
         assert_enough_offer(tx, product_list)
-        storage_locations = get_storage_locations(tx, product_list)
+        storage_locations = get_storage_locations(tx, start_id, product_list)
         assert_route(product_list, storage_locations)
 
         
