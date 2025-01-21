@@ -101,7 +101,8 @@ PROCESS_ORDER_SUMMARY = '''
 WITH $summary AS data
 UNWIND data AS item
 MATCH (product: Product {id: item.productId})-[contains: CONTAINS]-()-[:STORES]-(storage: Storage {id: item.storageId})
-WHERE contains.quantity = item.quantity
+CALL apoc.util.validate(contains.quantity <> item.quantity, "Expected " + item.quantity + " of '" + product.id + "' in " + storage.id + ", but found " + contains.quantity, [product])
+
 WITH contains.quantity - item.take as new_quantity, contains
 CALL apoc.do.when(
     new_quantity > 0,
@@ -121,16 +122,19 @@ ON CREATE SET c.quantity = $quantity
 """
 
 MOVE_PRODUCT_TO_LOCATION = """
-MATCH (:Storage {id: $toLocation})-[:STORES]-(p: Pallet)
-MATCH (product: Product {id: $productId})
+MATCH (product: Product {id: $gwin})
+OPTIONAL MATCH (:Storage {id: $fromLocation})-[:STORES]-()-[c1: CONTAINS]-(product)
+CALL apoc.util.validate(c1 IS NULL, $fromLocation + " does not have product: " + $gwin, [product])
 
+WITH c1.quantity - $quantity as new_quantity, c1, product
+CALL apoc.util.validate(new_quantity < 0, $fromLocation + " has " + c1.quantity + " products of: " + $gwin + ", not enough to move " + $quantity, [new_quantity])
+
+MATCH (:Storage {id: $toLocation})-[:STORES]-(p: Pallet)
 MERGE (p)-[c: CONTAINS]->(product)
 ON CREATE SET c.quantity = $quantity
 ON MATCH SET c.quantity = c.quantity + $quantity
 
-WITH product
-MATCH (:Storage {id: $fromLocation})-[:STORES]-()-[c1: CONTAINS]-(product)
-WITH c1.quantity - $quantity as new_quantity, c1
+WITH new_quantity, c1
 CALL apoc.do.when(
     new_quantity > 0,
     "SET c1.quantity = new_quantity",
