@@ -69,8 +69,8 @@ WHERE from.id = sortedNodes[i] AND to.id = sortedNodes[i+1]
 CALL apoc.algo.dijkstra(from, to, 'CONNECTED_TO', 'distance')
 YIELD path, weight
 RETURN
-    from.id as from,
-    to.id as to,
+    from.id as from_location,
+    to.id as to_location,
     weight as distance,
     [n in nodes(path) WHERE n.z = 0] as path
 '''
