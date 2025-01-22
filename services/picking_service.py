@@ -10,7 +10,7 @@ import warnings
 
 @dataclass
 class PickingSolution:
-    summaries: list[dict[str, dict[str, dict[str, int]]]]
+    summaries: list[list[dict[str, str | int]]]
     paths: list[list[dict]]
     performance_metrics: Optional[dict[str, float]]
 
@@ -220,21 +220,15 @@ class PickingService:
     @staticmethod
     def _process_order_summary(
         tx: Transaction,
-        summary: dict[str, dict[str, dict[str, int]]]
+        summary: list[dict[str, str | int]]
         ) -> None:
 
-        flat_summary = [
-            {'storageId': storage_id, 'productId': product_id, 'quantity': data['quantity'], 'take': data['take']} 
-            for storage_id, products in summary.items()
-            for product_id, data in products.items()
-        ]
-
-        assert_order_summary(tx, flat_summary)
-        tx.run(PROCESS_ORDER_SUMMARY, summary=flat_summary)
+        assert_order_summary(tx, summary)
+        tx.run(PROCESS_ORDER_SUMMARY, summary=summary)
 
     def process_order_summary(
             self, 
-            summary: dict[str, dict[str, dict[str, int]]]
+            summary: list[dict[str, str | int]]
         ) -> None:
 
         with Config.db.driver.session() as session:
@@ -246,20 +240,14 @@ class PickingService:
     @staticmethod
     def _restore_order_summary(
         tx: Transaction,
-        summary: dict[str, dict[str, dict[str, int]]]
+        summary: list[dict[str, str | int]]
         ) -> None:
 
-        flat_summary = [
-            {'storageId': storage_id, 'productId': product_id, 'quantity': data['quantity'], 'take': data['take']} 
-            for storage_id, products in summary.items()
-            for product_id, data in products.items()
-        ]
-
-        tx.run(RESTORE_ORDER_SUMMARY, summary=flat_summary)
+        tx.run(RESTORE_ORDER_SUMMARY, summary=summary)
 
     def restore_order_summary(
             self, 
-            summary: dict[str, dict[str, dict[str, int]]]
+            summary: list[dict[str, str | int]]
         ) -> None:
 
         with Config.db.driver.session() as session:

@@ -204,7 +204,7 @@ class TSPSolver:
 def get_picking_summary(
         tour: list, 
         storage_locations: list[Record]
-    ) -> dict[str, dict[str, int]]:
+    ) -> list[dict[str, str | int]]:
     '''
     Generate a picking summary report ordered by tour sequence.
     
@@ -225,20 +225,15 @@ def get_picking_summary(
         if (i := storage_ids.index(loc['storageId'])) in tour_nodes
     ]
     sorted_locations = [loc for loc, _ in sorted(locations, key=lambda x: x[1], reverse=False)]
-
-    summary = dict()
+    summary = list()
 
     for location in sorted_locations:
-        storage_id = location['storageId']
-        product_id = location['productId']
-        
-        if storage_id not in summary:
-            summary[storage_id] = {}
-            
-        summary[storage_id][product_id] = {
+        summary.append({
+            'storage_id': location['storageId'],
+            'product_id': location['productId'],
             'quantity': location['quantity'],
             'take': location['take']
-        }
+        })
     
     return summary
 

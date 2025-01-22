@@ -200,3 +200,16 @@ def product_list_from_summaries(summaries):
             product_list[key] += value
 
     return dict(product_list)
+
+def product_list_from_flat_summaries(summaries):
+
+    product_list = defaultdict(int)
+
+    for summary in summaries:
+        for element in summary:
+            key = element['product_id']
+            value = element['take']
+
+            product_list[key] += value
+
+    return dict(product_list)

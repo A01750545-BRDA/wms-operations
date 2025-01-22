@@ -75,12 +75,12 @@ def assert_route(
 
 def assert_order_summary(
         tx: Transaction,
-        flat_summary: list[dict]
+        summary: list[dict[str, str | int]]
     ) -> None:
     
     mismatches = tx.run(
         MISMATCHES_ORDER_SUMMARY,
-        summary=flat_summary
+        summary=summary
     ).single()['failedItems']
 
     assert not mismatches, f'{len(mismatches)} mismatches found. {[mismatch for mismatch in mismatches]}'
