@@ -163,9 +163,10 @@ def create_pallets(tx: Transaction) -> None:
 def add_products_to_pallets(tx: Transaction) -> None:
     for i in range(1, unique_pallets + 1):
         distinct_products = random.randint(1, 5)
-
-        for _ in range(distinct_products):
-            product_id = f'Product_{random.randint(1, unique_products)}'
+        product_index_options = random.sample(range(1, unique_products + 1), distinct_products)
+        
+        for index in product_index_options:
+            product_id = f'Product_{index}'
             quantity = random.randint(50, 300)
 
             tx.run(
