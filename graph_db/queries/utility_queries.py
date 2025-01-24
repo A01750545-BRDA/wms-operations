@@ -33,8 +33,10 @@ ORDER BY contained DESC
 '''
 
 SPECIFIC_PRODUCT_OFFER = '''
-MATCH (product: Product)<-[contains: CONTAINS]-()
-WHERE product.id IN $productIds
-RETURN product.id as id, sum(contains.quantity) as contained
+UNWIND $productIds AS productId
+OPTIONAL MATCH (product: Product {id: productId})
+CALL apoc.util.validate(product IS NULL, "Warehouse has no registered product: " + productId, [productId])
+OPTIONAL MATCH (product)<-[contains: CONTAINS]-()
+RETURN product.id as id, sum(coalesce(contains.quantity, 0)) as contained
 ORDER BY contained DESC
 '''

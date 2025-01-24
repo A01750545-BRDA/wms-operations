@@ -36,9 +36,9 @@ WITH productId, from, desiredQuantity, storagesList[index] as storage,
 WHERE take > 0
 
 RETURN
-    productId,
+    productId as product_id,
     storage.quantity as quantity,
-    storage.storageId as storageId,
+    storage.storageId as storage_id,
     take
 ORDER BY productId, storage.distance
 '''

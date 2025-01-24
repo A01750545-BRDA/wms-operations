@@ -6,7 +6,7 @@ CREATE (:Storage {
     index: $index,
     level: $level,
     row: $row,
-    adjacentCol: $adjacentCol,
+    adjacentCols: $adjacentCols,
     x: $x,
     y: $y,
     z: $z
@@ -100,7 +100,7 @@ CREATE (i)-[:CONNECTED_TO {
 
 CONNECT_HALL_STORAGE = '''
 MATCH (h: Hall), (s: Storage)
-WHERE h.row = s.row AND h.col = s.adjacentCol AND h.index = s.index
+WHERE h.row = s.row AND h.col IN s.adjacentCols AND h.index = s.index
 WITH h, s, abs(h.x - s.x) as x, abs(h.y - s.y) as y
 CREATE (h)-[:CONNECTED_TO {
     distance: x + y,

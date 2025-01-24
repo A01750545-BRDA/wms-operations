@@ -69,7 +69,7 @@ def create_warehouse(tx: Transaction) -> None:
                             index=index,
                             level=level,
                             row=row,
-                            adjacentCol=col + rack_column,
+                            adjacentCols=[col + rack_column],
                             x=x,
                             y=y,
                             z=z
