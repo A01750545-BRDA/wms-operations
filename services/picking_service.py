@@ -105,7 +105,7 @@ class PickingService:
             
             # Generate picking summary
             with TimedOperation('summary_generation', debug) as op:
-                summary = get_picking_summary(solution.tour, storage_locations)
+                summary = get_picking_summary(solution.tour, storage_locations, node_to_index)
             metrics['summary_generation'] += op.duration
 
             paths.append(path)
@@ -172,7 +172,7 @@ class PickingService:
             paths.append(path)
             
             # Generate picking summary
-            summary = get_picking_summary(solution.tour, storage_locations)
+            summary = get_picking_summary(solution.tour, storage_locations, node_to_index)
             summaries.append(summary)
         
         return PickingSolution(

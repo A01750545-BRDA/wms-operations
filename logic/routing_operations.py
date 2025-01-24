@@ -25,7 +25,7 @@ def get_distance_matrix(
         - 2D list representing the distance matrix
         - Dictionary mapping node IDs to their matrix indices
     '''
-    storage_ids = list({loc['storageId'] for loc in storage_locations}) + list({start_id, dest_id})
+    storage_ids = list({loc['storage_id'] for loc in storage_locations} | {start_id, dest_id})
     matrix_size = len(storage_ids)
     
     node_to_index = {id_: i for i, id_ in enumerate(storage_ids)}
@@ -203,7 +203,8 @@ class TSPSolver:
 
 def get_picking_summary(
         tour: list, 
-        storage_locations: list[Record]
+        storage_locations: list[Record],
+        node_to_index: dict[str, int]
     ) -> list[dict[str, str | int]]:
     '''
     Generate a picking summary report ordered by tour sequence.
@@ -216,24 +217,14 @@ def get_picking_summary(
         Nested dictionary mapping storage IDs to their PRODUCTs and picking details
     '''
 
-    storage_ids = list({loc['storageId'] for loc in storage_locations})
     tour_nodes = set(tour)
 
     locations = [
         (loc, tour.index(i)) 
         for loc in storage_locations 
-        if (i := storage_ids.index(loc['storageId'])) in tour_nodes
+        if (i := node_to_index[loc['storage_id']]) in tour_nodes
     ]
-    sorted_locations = [loc for loc, _ in sorted(locations, key=lambda x: x[1], reverse=False)]
-    summary = list()
-
-    for location in sorted_locations:
-        summary.append({
-            'storage_id': location['storageId'],
-            'product_id': location['productId'],
-            'quantity': location['quantity'],
-            'take': location['take']
-        })
+    summary = [loc.data() for loc, _ in sorted(locations, key=lambda x: x[1], reverse=False)]
     
     return summary
 

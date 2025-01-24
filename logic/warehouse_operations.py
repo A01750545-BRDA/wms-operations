@@ -58,7 +58,7 @@ def assert_route(
 
     built_product_list = dict()
     for location in storage_locations:
-        product_id = location['productId']
+        product_id = location['product_id']
         
         if product_id in built_product_list:
             built_product_list[product_id] += location['take']
