@@ -100,7 +100,7 @@ CREATE (i)-[:CONNECTED_TO {
 
 CONNECT_HALL_STORAGE = '''
 MATCH (h: Hall), (s: Storage)
-WHERE h.row = s.row AND h.col IN s.adjacentCols AND h.index = s.index
+WHERE h.row = s.row AND h.col IN s.adjacentCols AND h.index = s.index AND s.level = 1
 WITH h, s, abs(h.x - s.x) as x, abs(h.y - s.y) as y
 CREATE (h)-[:CONNECTED_TO {
     distance: x + y,
@@ -113,7 +113,7 @@ CREATE (h)-[:CONNECTED_TO {
 CONNECT_IN_ORIGIN = '''
 MATCH (o: Origin), (i: Intersection)
 WHERE o.id IN $originIds AND i.id IN $intersectionIds
-WITH o, i, (o.x - i.x) as x, (o.y - i.y) as y
+WITH o, i, abs(o.x - i.x) as x, abs(o.y - i.y) as y
 CREATE (o)-[:CONNECTED_TO {
     distance: (x^2 + y^2)^0.5,
     x: x,
@@ -125,7 +125,7 @@ CREATE (o)-[:CONNECTED_TO {
 CONNECT_OUT_ORIGIN = '''
 MATCH (o: Origin), (i: Intersection)
 WHERE o.id IN $originIds AND i.id IN $intersectionIds
-WITH o, i, (o.x - i.x) as x, (o.y - i.y) as y
+WITH o, i, abs(o.x - i.x) as x, abs(o.y - i.y) as y
 CREATE (i)-[:CONNECTED_TO {
     distance: (x^2 + y^2)^0.5,
     x: x,

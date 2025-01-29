@@ -51,20 +51,22 @@ details = {
     },
     'row_configs': [
         {
+            "row_id": 2,
+            "row_layout": create_standard_row_layout(n_halls=14),
+            "id_suffix": ""   
+        },
+        {
             "row_id": 1,
             "row_layout": create_standard_row_layout(n_halls=10),
             "id_suffix": "2"
         },
-        {
-            "row_id": 2,
-            "row_layout": create_standard_row_layout(n_halls=14),
-            "id_suffix": ""   
-        }
     ]
 }
 
 details['row_configs'][0]['row_layout'][1].pop()
+details['row_configs'][0]['row_layout'].pop(0)
 details['row_configs'][1]['row_layout'][1].pop()
+details['row_configs'][1]['row_layout'].pop(0)
 
 dimensions = {
     'hall': {
@@ -80,6 +82,7 @@ dimensions = {
 
 def create_gaon_warehouse(tx: Transaction) -> None:
     n_cols = 0
+    total_halls = 0
     hall_x_row_coords = []
 
     for row_config in details['row_configs']:
@@ -114,7 +117,7 @@ def create_gaon_warehouse(tx: Transaction) -> None:
                             tx.run(
                                 CREATE_STORAGE,
                                 id=f'{rack_id}{row_config['id_suffix']}-{level}-{index}',
-                                rack=rack_id,
+                                rack=rack_id + row_config['id_suffix'],
                                 index=index,
                                 level=level,
                                 row=row_config['row_id'],
@@ -125,6 +128,8 @@ def create_gaon_warehouse(tx: Transaction) -> None:
                             )
             else:
                 n_hall += 1
+                total_halls += 1
+                hall_id = number_to_letters(total_halls)
                 n_cols = max(n_cols, n_hall)
 
                 x = (
@@ -140,7 +145,7 @@ def create_gaon_warehouse(tx: Transaction) -> None:
 
                     tx.run(
                         CREATE_HALL,
-                        id=f'C{n_hall}.R{row_config['row_id']}.{index}',
+                        id=hall_id,
                         col=n_hall,
                         row=row_config['row_id'],
                         index=index,
@@ -153,7 +158,7 @@ def create_gaon_warehouse(tx: Transaction) -> None:
 
     # Intersection row
     hall_x_coords = max(hall_x_row_coords, key=lambda x: len(x))
-    n_rows = row_config['row_id'] + 1
+    n_rows = len(hall_x_row_coords) + 1
     
     for row in range(1, n_rows + 1):
         y = (row - 0.5) * dimensions['hall']['y'] + (row - 1) * dimensions['pallet']['y'] * details['rack']['indexes']
@@ -182,18 +187,53 @@ def create_gaon_warehouse(tx: Transaction) -> None:
     tx.run(CONNECT_HALL_STORAGE)
 
     # Starting point
-    tx.run(CREATE_ORIGIN, id=f'start', x=x - (dimensions['hall']['x'] + dimensions['pallet']['x'] * 2) * 3, y=-2)
+    tx.run(CREATE_ORIGIN, id=f'start', x=hall_x_coords[-4], y=-2)
     tx.run(CONNECT_IN_ORIGIN, originIds=['start'], intersectionIds=[f"C{n_cols - 3}.R1"])
+    
+    tx.run(CREATE_ORIGIN, id=f'dest1', x=hall_x_coords[-3], y=-2)
+    tx.run(CONNECT_OUT_ORIGIN, originIds=['dest1'], intersectionIds=[f"C{n_cols - 2}.R1"])
 
-    # Destinations
-    destinations = ['dest3', 'dest2', 'dest1']
-    for i, destination in enumerate(destinations):
-        tx.run(CREATE_ORIGIN, id=f'{destination}', x=x - (dimensions['hall']['x'] + dimensions['pallet']['x'] * 2) * i, y=-2)
-
-    tx.run(CONNECT_OUT_ORIGIN, originIds=destinations, intersectionIds=[f"C{col}.R1" for col in range(n_cols - 2, n_cols + 1)])
+    # Patio
+    floor_level = 5
+    x_floor = (hall_x_coords[-3] + hall_x_coords[-2]) / 2
+    y_floor = (1.5 * dimensions['hall']['y'] + dimensions['pallet']['y'] * details['rack']['indexes']) / 2
+    z_floor = (floor_level - 1) * dimensions['pallet']['z']
+    tx.run(
+        CREATE_STORAGE,
+        id='Patio',
+        rack='Patio',
+        index=None,
+        row=None,
+        adjacentCols=None,
+        level=floor_level,
+        x=x_floor,
+        y=y_floor,
+        z=z_floor
+    )
+    connect_floor_to_intersection = """
+    MATCH (s: Storage {id: 'Patio'})
+    MATCH (i: Intersection)
+    WHERE i.id IN $intersectionIds
+    WITH s, i, abs(s.x - i.x) as x, abs(s.y - i.y) as y, abs(s.z - i.z) as z
+    CREATE (i)-[:CONNECTED_TO {
+        distance: (x^2 + y^2)^0.5 + z,
+        x: x,
+        y: y,
+        z: z
+    }]->(s)
+    """
+    tx.run(
+        connect_floor_to_intersection, 
+        intersectionIds=[f"C{col}.R1" for col in range(n_cols - 3, n_cols + 1)] + [f"C{n_cols}.R2"]
+    )
 
 unique_products = WarehouseSpecs.unique_products
-unique_pallets = 3024
+unique_pallets = sum(
+    len(element) * details['rack']['indexes'] * details['rack']['levels']
+    for row_config in details['row_configs'] 
+    for element in row_config['row_layout'] 
+    if isinstance(element, list)
+) + 1
 
 def create_gaon_products(tx: Transaction) -> None:
     for i in range(1, unique_products + 1):
