@@ -40,4 +40,4 @@ class WarehouseSpecs:
         details['rack']['indexes'] *
         details['rack']['levels']
     )
-    unique_products = 10
+    unique_products = 1000

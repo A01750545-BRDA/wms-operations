@@ -11,11 +11,9 @@ from graph_db.queries.creation_queries import (
     CONNECT_IN_ORIGIN,
     CONNECT_OUT_ORIGIN,
     CREATE_PRODUCT,
-    CREATE_PALLET,
-    ADD_PRODUCT_TO_PALLET,
-    ADD_PALLET_TO_STORAGE
 )
 from graph_db.queries.utility_queries import GET_STORAGES
+from graph_db.queries.manipulation_queries import ADD_PRODUCT_TO_LOCATION
 from data import WarehouseSpecs
 from neo4j import Transaction
 from config.settings import Config
@@ -53,12 +51,12 @@ details = {
         {
             "row_id": 2,
             "row_layout": create_standard_row_layout(n_halls=14),
-            "id_suffix": ""   
+            "id_suffix": 0  
         },
         {
             "row_id": 1,
             "row_layout": create_standard_row_layout(n_halls=10),
-            "id_suffix": "2"
+            "id_suffix": 25
         },
     ]
 }
@@ -101,7 +99,7 @@ def create_gaon_warehouse(tx: Transaction) -> None:
                 
                 for adjacent_cols in adjacent_rack_cols:
                     n_rack += 1
-                    rack_id = number_to_letters(n_rack)
+                    rack_id = str(n_rack + row_config['id_suffix'])# str(number_to_letters(n_rack) + row_config['id_suffix'])
 
                     x = (
                         n_hall * dimensions['hall']['x'] + # The amount of halls
@@ -116,8 +114,8 @@ def create_gaon_warehouse(tx: Transaction) -> None:
 
                             tx.run(
                                 CREATE_STORAGE,
-                                id=f'{rack_id}{row_config['id_suffix']}-{level}-{index}',
-                                rack=rack_id + row_config['id_suffix'],
+                                id=f'{rack_id}-{level}-{index}',
+                                rack=rack_id,
                                 index=index,
                                 level=level,
                                 row=row_config['row_id'],
@@ -228,7 +226,7 @@ def create_gaon_warehouse(tx: Transaction) -> None:
     )
 
 unique_products = WarehouseSpecs.unique_products
-unique_pallets = sum(
+unique_locations = sum(
     len(element) * details['rack']['indexes'] * details['rack']['levels']
     for row_config in details['row_configs'] 
     for element in row_config['row_layout'] 
@@ -243,42 +241,22 @@ def create_gaon_products(tx: Transaction) -> None:
             volume=random.randint(1, 10),
         )
 
-def create_gaon_pallets(tx: Transaction) -> None:
-    for i in range(1, unique_pallets + 1):
-        volume = 500
-        tx.run(
-            CREATE_PALLET,
-            id=f'Pallet_{i}',
-            volume=volume,
-        )
-
-def add_gaon_products_to_pallets(tx: Transaction) -> None:
-    for i in range(1, unique_pallets + 1):
+def add_gaon_products_to_locations(tx: Transaction) -> None:
+    locations = tx.run(
+        GET_STORAGES,
+        n=unique_locations
+    )
+    for location in locations:
         distinct_products = random.randint(1, 5)
         product_index_options = random.sample(range(1, unique_products + 1), distinct_products)
-        
+
         for index in product_index_options:
             product_id = f'Product_{index}'
             quantity = random.randint(50, 300)
 
             tx.run(
-                ADD_PRODUCT_TO_PALLET,
+                ADD_PRODUCT_TO_LOCATION,
                 productId=product_id,
-                palletId=f'Pallet_{i}',
+                location=location.get('id'),
                 quantity=quantity,
             )
-
-def add_gaon_pallets_to_storage(tx: Transaction) -> None:
-    result = tx.run(
-        GET_STORAGES,
-        n=unique_pallets
-    )
-    
-    i = 1
-    for record in result:
-        tx.run(
-            ADD_PALLET_TO_STORAGE,
-            palletId=f'Pallet_{i}',
-            storageId=record.get('id'),
-        )
-        i += 1

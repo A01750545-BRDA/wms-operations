@@ -1,7 +1,7 @@
 import random
 from neo4j import Record, Transaction
 from graph_db.queries.utility_queries import GET_RAND_N_PRODUCTS, SPECIFIC_PRODUCT_OFFER
-from graph_db.queries.manipulation_queries import STORAGE_LOCATION_RETRIEVER, MISMATCHES_ORDER_SUMMARY
+from graph_db.queries.manipulation_queries import STORAGE_LOCATION_RETRIEVER
 
 def simulate_product_list(
         tx: Transaction, 
@@ -79,7 +79,7 @@ def assert_order_summary(
     ) -> None:
     
     mismatches = tx.run(
-        MISMATCHES_ORDER_SUMMARY,
+        "",
         summary=summary
     ).single()['failedItems']
 

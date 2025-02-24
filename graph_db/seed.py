@@ -10,12 +10,10 @@ from graph_db.queries.creation_queries import (
     CREATE_ORIGIN,
     CONNECT_IN_ORIGIN,
     CONNECT_OUT_ORIGIN,
-    CREATE_PRODUCT,
-    CREATE_PALLET,
-    ADD_PRODUCT_TO_PALLET,
-    ADD_PALLET_TO_STORAGE
+    CREATE_PRODUCT
 )
 from graph_db.queries.utility_queries import GET_STORAGES
+from graph_db.queries.manipulation_queries import ADD_PRODUCT_TO_LOCATION
 from data import WarehouseSpecs
 from neo4j import Transaction
 from config.settings import Config
@@ -141,7 +139,7 @@ def create_warehouse(tx: Transaction) -> None:
     )
 
 unique_products = WarehouseSpecs.unique_products
-unique_pallets = WarehouseSpecs.unique_positions
+unique_locations = WarehouseSpecs.unique_positions
 
 def create_products(tx: Transaction) -> None:
     for i in range(1, unique_products + 1):
@@ -151,50 +149,28 @@ def create_products(tx: Transaction) -> None:
             volume=random.randint(1, 10),
         )
 
-def create_pallets(tx: Transaction) -> None:
-    for i in range(1, unique_pallets + 1):
-        volume = 500
-        tx.run(
-            CREATE_PALLET,
-            id=f'Pallet_{i}',
-            volume=volume,
-        )
-
-def add_products_to_pallets(tx: Transaction) -> None:
-    for i in range(1, unique_pallets + 1):
+def add_products_to_locations(tx: Transaction) -> None:
+    locations = tx.run(
+        GET_STORAGES,
+        n=unique_locations
+    )
+    for location in locations:
         distinct_products = random.randint(1, 5)
         product_index_options = random.sample(range(1, unique_products + 1), distinct_products)
-        
+
         for index in product_index_options:
             product_id = f'Product_{index}'
             quantity = random.randint(50, 300)
 
             tx.run(
-                ADD_PRODUCT_TO_PALLET,
+                ADD_PRODUCT_TO_LOCATION,
                 productId=product_id,
-                palletId=f'Pallet_{i}',
+                locationId=location.get('id'),
                 quantity=quantity,
             )
-
-def add_pallets_to_storage(tx: Transaction) -> None:
-    result = tx.run(
-        GET_STORAGES,
-        n=unique_pallets
-    )
-    
-    i = 1
-    for record in result:
-        tx.run(
-            ADD_PALLET_TO_STORAGE,
-            palletId=f'Pallet_{i}',
-            storageId=record.get('id'),
-        )
-        i += 1
 
 if __name__ == '__main__':
     with Config.db.driver.session() as session:
         session.execute_write(create_warehouse)
         session.execute_write(create_products)
-        session.execute_write(create_pallets)
-        session.execute_write(add_products_to_pallets)
-        session.execute_write(add_pallets_to_storage)
+        session.execute_write(add_products_to_locations)

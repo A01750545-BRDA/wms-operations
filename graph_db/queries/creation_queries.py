@@ -135,27 +135,11 @@ CREATE (i)-[:CONNECTED_TO {
 '''
 
 ### Objects
-CREATE_PALLET = '''
-CREATE (:Pallet {
-    id: $id
-})'''
-
-ADD_PALLET_TO_STORAGE = '''
-MATCH (s: Storage), (p: Pallet)
-WHERE s.id = $storageId AND p.id = $palletId
-CREATE (s)-[:STORES]->(p)
-'''
 
 CREATE_PRODUCT = '''
 CREATE (:Product {
     id: $id
 })'''
-
-ADD_PRODUCT_TO_PALLET = '''
-MATCH (pallet: Pallet), (product: Product)
-WHERE pallet.id = $palletId AND product.id = $productId
-CREATE (pallet)-[:CONTAINS {quantity: $quantity}]->(product)
-'''
 
 CONDITIONAL_CREATE_PRODUCT = """
 MERGE (product: Product {id: $id})

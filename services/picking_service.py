@@ -4,7 +4,6 @@ from time import time
 from neo4j import Transaction
 from logic.warehouse_operations import get_storage_locations, assert_enough_offer, assert_route, assert_order_summary
 from logic.routing_operations import get_distance_matrix, get_picking_summary, TSPSolver, find_path
-from graph_db.queries.manipulation_queries import PROCESS_ORDER_SUMMARY, RESTORE_ORDER_SUMMARY
 from config.settings import Config
 import warnings
 
@@ -216,43 +215,3 @@ class PickingService:
                 )
         
         return picking_solution
-    
-    @staticmethod
-    def _process_order_summary(
-        tx: Transaction,
-        summary: list[dict[str, str | int]]
-        ) -> None:
-
-        assert_order_summary(tx, summary)
-        tx.run(PROCESS_ORDER_SUMMARY, summary=summary)
-
-    def process_order_summary(
-            self, 
-            summary: list[dict[str, str | int]]
-        ) -> None:
-
-        with Config.db.driver.session() as session:
-            session.execute_write(
-                self._process_order_summary,
-                summary
-            )
-    
-    @staticmethod
-    def _restore_order_summary(
-        tx: Transaction,
-        summary: list[dict[str, str | int]]
-        ) -> None:
-
-        tx.run(RESTORE_ORDER_SUMMARY, summary=summary)
-
-    def restore_order_summary(
-            self, 
-            summary: list[dict[str, str | int]]
-        ) -> None:
-
-        with Config.db.driver.session() as session:
-            session.execute_write(
-                self._restore_order_summary,
-                summary
-            )
-    
